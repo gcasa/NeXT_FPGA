@@ -101,6 +101,8 @@ begin
   begin
     wait for 100 ns;
     rst <= '0';
+    wait until rising_edge(clk);
+    assert ipl_n = "111" report "Idle interrupt priority lines should be inactive" severity failure;
 
     bus_write(clk, addr, data, as_n, rw, dsack_n, x"00000004", x"12345678");
     bus_read(clk, addr, data, as_n, rw, dsack_n, x"00000004");

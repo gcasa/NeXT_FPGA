@@ -39,7 +39,7 @@ begin
     if active = '1' then
       irq_out <= "110";
     else
-      irq_out <= "000";
+      irq_out <= "111";
     end if;
   end process;
 

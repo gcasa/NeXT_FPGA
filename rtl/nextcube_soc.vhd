@@ -8,7 +8,8 @@ entity nextcube_soc is
   generic (
     RAM_ADDR_BITS  : positive := 16;
     ROM_ADDR_BITS  : positive := 14;
-    VRAM_ADDR_BITS : positive := 16
+    VRAM_ADDR_BITS : positive := 16;
+    USE_INTERNAL_68040 : boolean := false
   );
   port (
     clk_40m       : in    std_logic;
@@ -42,6 +43,8 @@ end entity;
 architecture rtl of nextcube_soc is
   signal cpu_req       : bus_req_t := BUS_REQ_IDLE;
   signal cpu_rsp       : bus_rsp_t := BUS_RSP_IDLE;
+  signal external_cpu_req : bus_req_t := BUS_REQ_IDLE;
+  signal internal_cpu_req : bus_req_t := BUS_REQ_IDLE;
   signal arb_req       : bus_req_t := BUS_REQ_IDLE;
   signal arb_rsp       : bus_rsp_t := BUS_RSP_IDLE;
 
@@ -68,20 +71,42 @@ architecture rtl of nextcube_soc is
   signal irq_lines     : irq_lines_t := IRQ_LINES_IDLE;
   signal rtc_irq       : std_logic := '0';
   signal io_irq        : std_logic := '0';
+  signal system_reset_n : std_logic := '0';
+  signal internal_cpu_reset_n : std_logic := '0';
+  signal cpu_ipl_n      : std_logic_vector(2 downto 0) := (others => '1');
+  signal internal_cpu_boot_done : std_logic := '0';
+  signal internal_cpu_pc : std_logic_vector(31 downto 0) := (others => '0');
 begin
-  cpu_req.valid <= not m68k_as_n;
-  cpu_req.rw    <= m68k_rw;
-  cpu_req.addr  <= m68k_addr;
-  cpu_req.wdata <= m68k_data;
-  cpu_req.be    <= not m68k_be_n;
+  external_cpu_req.valid <= not m68k_as_n;
+  external_cpu_req.rw    <= m68k_rw;
+  external_cpu_req.addr  <= m68k_addr;
+  external_cpu_req.wdata <= m68k_data;
+  external_cpu_req.be    <= not m68k_be_n;
 
-  m68k_data <= cpu_rsp.rdata when cpu_rsp.ready = '1' and m68k_rw = '1' else (others => 'Z');
-  m68k_dsack_n <= "00" when cpu_rsp.ready = '1' else "11";
+  cpu_req <= internal_cpu_req when USE_INTERNAL_68040 else external_cpu_req;
+
+  m68k_data <= cpu_rsp.rdata when USE_INTERNAL_68040 = false and cpu_rsp.ready = '1' and m68k_rw = '1' else (others => 'Z');
+  m68k_dsack_n <= "00" when USE_INTERNAL_68040 = false and cpu_rsp.ready = '1' else "11";
+  m68k_ipl_n <= cpu_ipl_n;
+  m68k_reset_n <= system_reset_n;
+  internal_cpu_reset_n <= not rst;
 
   irq_lines.scsi <= scsi_irq;
   irq_lines.ethernet <= eth_irq;
   irq_lines.serial <= io_irq;
   irq_lines.rtc <= rtc_irq;
+
+  internal_cpu_i : entity work.next_m68040_core
+    port map (
+      clk       => clk_40m,
+      rst       => rst,
+      reset_n   => internal_cpu_reset_n,
+      ipl_n     => cpu_ipl_n,
+      bus_req   => internal_cpu_req,
+      bus_rsp   => cpu_rsp,
+      boot_done => internal_cpu_boot_done,
+      pc        => internal_cpu_pc
+    );
 
   arbiter_i : entity work.next_bus_arbiter
     port map (
@@ -161,8 +186,8 @@ begin
       req     => system_req,
       rsp     => system_rsp,
       irq_in  => irq_lines,
-      irq_out => m68k_ipl_n,
-      reset_n => m68k_reset_n
+      irq_out => cpu_ipl_n,
+      reset_n => system_reset_n
     );
 
   dma_i : entity work.next_dma_asic

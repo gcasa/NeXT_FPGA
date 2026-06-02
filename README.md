@@ -11,6 +11,7 @@ behavior, bus traces, and real peripheral documentation.
 The repository currently contains:
 
 - A 68030-style external CPU bus socket.
+- An optional internal 68040 integration shell.
 - Shared bus, DMA, and interrupt record types.
 - A starter memory map and address decoder.
 - Inferred RAM, ROM, and VRAM blocks.
@@ -35,6 +36,7 @@ responsibilities one at a time.
 │   ├── next_dma_asic.vhd
 │   ├── next_io_asic.vhd
 │   ├── next_memory_map_pkg.vhd
+│   ├── next_m68040_core.vhd
 │   ├── next_simple_ram.vhd
 │   ├── next_sound_asic.vhd
 │   ├── next_system_asic.vhd
@@ -84,12 +86,24 @@ The testbench instantiates `nextcube_soc` with small RAM/ROM/VRAM memories, then
 performs basic bus reads and writes. Passing this test means the starter bus
 plumbing is coherent; it does not imply machine-level compatibility.
 
+## CPU Integration
+
+The top-level entity defaults to the original external 68k-style CPU socket.
+Set `USE_INTERNAL_68040 => true` on `nextcube_soc` to select the internal
+`next_m68040_core` bus master instead.
+
+`next_m68040_core` is a CPU integration shell, not a complete MC68040
+instruction implementation. It issues the reset-vector reads at addresses
+`0x00000000` and `0x00000004`, latches the initial PC, and then idles. This
+keeps the SoC wiring ready for a real synthesizable 68040-compatible core
+without inventing inaccurate instruction behavior.
+
 ## Top-Level Interface
 
 The top-level entity is `nextcube_soc` in `rtl/nextcube_soc.vhd`. It exposes:
 
 - `clk_40m` and synchronous reset input.
-- A simple 32-bit 68030-style address/data bus.
+- A simple 32-bit 68k-style address/data bus.
 - 68k-style `AS`, `RW`, byte enables, `DSACK`, `IPL`, and reset signals.
 - Monochrome video timing outputs.
 - A PWM audio output.
@@ -101,7 +115,7 @@ integration is added.
 
 ## Known Gaps
 
-- No MC68030 core is implemented.
+- No complete MC68040 instruction core is implemented.
 - The address map is a pragmatic starter map, not confirmed cycle-accurate NeXT
   decoding.
 - ROM contents and reset-vector behavior are placeholders.
@@ -121,4 +135,3 @@ Good next milestones are:
 3. Refine the memory map using hardware references and ROM expectations.
 4. Wire video output to packed monochrome VRAM fetches.
 5. Expand DMA and I/O ASIC models around real software-visible register maps.
-

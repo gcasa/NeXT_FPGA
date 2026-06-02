@@ -8,6 +8,7 @@ can be refined against schematics, ROM behavior, and bus traces.
 
 - `rtl/next_types_pkg.vhd`: shared bus, DMA, and IRQ record types.
 - `rtl/next_memory_map_pkg.vhd`: starter address decode constants.
+- `rtl/next_m68040_core.vhd`: internal 68040 integration shell.
 - `rtl/next_bus_arbiter.vhd`: CPU/DMA master selection.
 - `rtl/next_bus_decode.vhd`: address decoder for RAM, ROM, VRAM, and ASICs.
 - `rtl/next_simple_ram.vhd`: small inferred RAM/ROM/VRAM block.
@@ -21,8 +22,10 @@ can be refined against schematics, ROM behavior, and bus traces.
 
 ## What Is Intentionally Incomplete
 
-- The MC68030 is not implemented. `nextcube_soc` exposes a simple external
-  68030-style bus so an existing 68k core or physical CPU bridge can be added.
+- A complete MC68040 instruction core is not implemented. `nextcube_soc` can
+  still expose the original external 68k-style bus, or it can instantiate the
+  internal `next_m68040_core` shell with `USE_INTERNAL_68040 => true`. The shell
+  currently performs reset-vector fetches and then idles.
 - ROM contents are a placeholder word. Replace `next_simple_ram` for ROM with a
   vendor block RAM initialized from the real boot ROM image.
 - VRAM fetch is not wired into the video path yet. The video ASIC currently
@@ -35,8 +38,8 @@ can be refined against schematics, ROM behavior, and bus traces.
 
 ## Suggested Next Steps
 
-1. Replace the external CPU socket with a synthesizable 68030-compatible core or
-   a 68020/68030 bus bridge.
+1. Replace `next_m68040_core` with a real synthesizable 68040-compatible
+   instruction core, or adapt it to a compatible 68020/68030 bus bridge.
 2. Replace the ROM placeholder with real boot ROM initialization and adjust the
    reset vector address map until the CPU fetches sensible vectors.
 3. Make `next_video_asic` fetch packed monochrome pixels from VRAM.

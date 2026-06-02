@@ -4,6 +4,7 @@ GHDL ?= ghdl
 RTL = \
 	rtl/next_types_pkg.vhd \
 	rtl/next_memory_map_pkg.vhd \
+	rtl/next_m68040_core.vhd \
 	rtl/next_bus_arbiter.vhd \
 	rtl/next_bus_decode.vhd \
 	rtl/next_simple_ram.vhd \
@@ -23,6 +24,9 @@ test: analyze
 	$(GHDL) -a $(VHDL_STD) tb/nextcube_soc_tb.vhd
 	$(GHDL) -e $(VHDL_STD) nextcube_soc_tb
 	$(GHDL) -r $(VHDL_STD) nextcube_soc_tb --assert-level=error
+	$(GHDL) -a $(VHDL_STD) tb/next_m68040_core_tb.vhd
+	$(GHDL) -e $(VHDL_STD) next_m68040_core_tb
+	$(GHDL) -r $(VHDL_STD) next_m68040_core_tb --assert-level=error
 
 clean:
 	$(GHDL) --clean
